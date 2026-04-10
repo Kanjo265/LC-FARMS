@@ -21,7 +21,10 @@ import {
   ShoppingCart, 
   ArrowRight,
   Star,
-  ChevronDown
+  ChevronDown,
+  Youtube,
+  Facebook,
+  Instagram
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -43,7 +46,7 @@ const IMAGES = {
   DRIED: "https://lh3.googleusercontent.com/d/1VBBuvwtsTl5NVwGY-ISPZcTXYCF1USVe",
 };
 
-const WHATSAPP_NUMBER = "+265XXXXXXXXX"; // Placeholder Malawian number
+const WHATSAPP_NUMBER = "+265885627133";
 const WHATSAPP_LINK = `https://wa.me/${WHATSAPP_NUMBER}?text=Hello%20LC%20FARMS,%20I'm%20interested%20in%20your%20mushrooms!`;
 
 const formSchema = z.object({
@@ -90,18 +93,16 @@ const Navbar = () => {
               {link.name}
             </a>
           ))}
-          <Button asChild className="bg-primary hover:bg-primary/90">
-            <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer">Order Now</a>
+          <Button className="bg-primary hover:bg-primary/90" render={<a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" />}>
+            Order Now
           </Button>
         </div>
 
         {/* Mobile Nav */}
         <div className="md:hidden">
           <Sheet>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className={isScrolled ? "text-foreground" : "text-white"}>
-                <Menu className="h-6 w-6" />
-              </Button>
+            <SheetTrigger render={<Button variant="ghost" size="icon" className={isScrolled ? "text-foreground" : "text-white"} />}>
+              <Menu className="h-6 w-6" />
             </SheetTrigger>
             <SheetContent side="right" className="w-[300px] sm:w-[400px]">
               <div className="flex flex-col gap-6 mt-10">
@@ -110,8 +111,8 @@ const Navbar = () => {
                     {link.name}
                   </a>
                 ))}
-                <Button asChild className="w-full">
-                  <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer">Order Now</a>
+                <Button className="w-full" render={<a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" />}>
+                  Order Now
                 </Button>
               </div>
             </SheetContent>
@@ -155,13 +156,11 @@ const Hero = () => {
               From farm to table — premium mushrooms grown sustainably in Malawi. Healthy, nutritious, and delivered fresh to your doorstep.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
-              <Button size="lg" className="bg-primary hover:bg-primary/90 text-lg px-8 py-6 h-auto" asChild>
-                <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer">
-                  Order Now <ArrowRight className="ml-2 h-5 w-5" />
-                </a>
+              <Button size="lg" className="bg-primary hover:bg-primary/90 text-lg px-8 py-6 h-auto" render={<a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" />}>
+                Order Now <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
-              <Button size="lg" variant="outline" className="bg-white/10 hover:bg-white/20 text-white border-white/30 text-lg px-8 py-6 h-auto" asChild>
-                <a href="#partners">Become a Distributor</a>
+              <Button size="lg" variant="outline" className="bg-white/10 hover:bg-white/20 text-white border-white/30 text-lg px-8 py-6 h-auto" render={<a href="#partners" />}>
+                Become a Distributor
               </Button>
             </div>
 
@@ -252,8 +251,8 @@ const Products = () => {
                       </li>
                     ))}
                   </ul>
-                  <Button className="w-full py-6 text-lg" asChild>
-                    <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer">{product.cta}</a>
+                  <Button className="w-full py-6 text-lg" render={<a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" />}>
+                    {product.cta}
                   </Button>
                 </CardContent>
               </Card>
@@ -414,8 +413,8 @@ const TargetCustomers = () => {
         </div>
 
         <div className="mt-16 text-center">
-          <Button size="lg" className="bg-primary hover:bg-primary/90 px-10 py-6 h-auto text-lg" asChild>
-            <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer">Partner With Us</a>
+          <Button size="lg" className="bg-primary hover:bg-primary/90 px-10 py-6 h-auto text-lg" render={<a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" />}>
+            Partner With Us
           </Button>
         </div>
       </div>
@@ -618,7 +617,7 @@ const Contact = () => {
                 </div>
                 <div>
                   <p className="font-bold">Phone</p>
-                  <p className="text-muted-foreground">+265 88X XXX XXX / +265 99X XXX XXX</p>
+                  <p className="text-muted-foreground">+265 885 627 133 / +265 991 890 948</p>
                 </div>
               </div>
               <div className="flex items-start gap-4">
@@ -627,7 +626,7 @@ const Contact = () => {
                 </div>
                 <div>
                   <p className="font-bold">Email</p>
-                  <p className="text-muted-foreground">info@lcfarms.mw</p>
+                  <p className="text-muted-foreground">lcfarmsmw@gmail.com</p>
                 </div>
               </div>
               <div className="flex items-start gap-4">
@@ -636,7 +635,7 @@ const Contact = () => {
                 </div>
                 <div>
                   <p className="font-bold">Location</p>
-                  <p className="text-muted-foreground">Lilongwe, Malawi</p>
+                  <p className="text-muted-foreground">Salima, Malawi</p>
                 </div>
               </div>
             </div>
@@ -647,10 +646,8 @@ const Contact = () => {
             <p className="text-muted-foreground mb-8">
               The fastest way to get a response and place your order is through WhatsApp. Our team is ready to assist you.
             </p>
-            <Button size="lg" className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white py-8 text-xl h-auto" asChild>
-              <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer">
-                <MessageCircle className="mr-3 h-7 w-7" /> Chat on WhatsApp
-              </a>
+            <Button size="lg" className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white py-8 text-xl h-auto" render={<a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" />}>
+              <MessageCircle className="mr-3 h-7 w-7" /> Chat on WhatsApp
             </Button>
             <p className="text-center mt-6 text-sm text-muted-foreground">
               Available Monday - Saturday, 8:00 AM - 5:00 PM
@@ -663,6 +660,12 @@ const Contact = () => {
 };
 
 const Footer = () => {
+  const socialLinks = [
+    { name: "Facebook", href: "#", icon: Facebook },
+    { name: "Instagram", href: "#", icon: Instagram },
+    { name: "YouTube", href: "http://www.youtube.com/@LC_FARMS", icon: Youtube },
+  ];
+
   return (
     <footer className="bg-secondary text-white pt-20 pb-10">
       <div className="container mx-auto px-4">
@@ -676,11 +679,16 @@ const Footer = () => {
               Malawi's leading agribusiness specializing in premium organic mushrooms. We are committed to sustainability, health, and empowering our local community.
             </p>
             <div className="flex gap-4">
-              {/* Social Placeholders */}
-              {["Facebook", "Instagram", "LinkedIn"].map((social) => (
-                <a key={social} href="#" className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-primary transition-colors">
-                  <span className="sr-only">{social}</span>
-                  <div className="w-5 h-5 bg-white/20 rounded-sm" />
+              {socialLinks.map((social) => (
+                <a 
+                  key={social.name} 
+                  href={social.href} 
+                  target={social.href.startsWith("http") ? "_blank" : undefined}
+                  rel={social.href.startsWith("http") ? "noopener noreferrer" : undefined}
+                  className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-primary transition-colors"
+                >
+                  <span className="sr-only">{social.name}</span>
+                  <social.icon className="h-5 w-5" />
                 </a>
               ))}
             </div>
