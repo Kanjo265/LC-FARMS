@@ -4,18 +4,24 @@ import * as React from "react"
 import { Dialog as SheetPrimitive } from "@base-ui/react/dialog"
 
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { XIcon } from "lucide-react"
 
 function Sheet({ ...props }: SheetPrimitive.Root.Props) {
   return <SheetPrimitive.Root data-slot="sheet" {...props} />
 }
 
-function SheetTrigger({ ...props }: SheetPrimitive.Trigger.Props) {
-  return <SheetPrimitive.Trigger data-slot="sheet-trigger" {...props} />
+function SheetTrigger({ className, asChild, ...props }: SheetPrimitive.Trigger.Props & { asChild?: boolean }) {
+  return (
+    <SheetPrimitive.Trigger
+      data-slot="sheet-trigger"
+      className={cn(className)}
+      {...props}
+    />
+  )
 }
 
-function SheetClose({ ...props }: SheetPrimitive.Close.Props) {
+function SheetClose({ asChild, ...props }: SheetPrimitive.Close.Props & { asChild?: boolean }) {
   return <SheetPrimitive.Close data-slot="sheet-close" {...props} />
 }
 
@@ -62,16 +68,12 @@ function SheetContent({
         {showCloseButton && (
           <SheetPrimitive.Close
             data-slot="sheet-close"
-            render={
-              <Button
-                variant="ghost"
-                className="absolute top-3 right-3"
-                size="icon-sm"
-              />
-            }
+            className={cn(
+              buttonVariants({ variant: "ghost", size: "icon-sm" }),
+              "absolute top-3 right-3"
+            )}
           >
-            <XIcon
-            />
+            <XIcon />
             <span className="sr-only">Close</span>
           </SheetPrimitive.Close>
         )}

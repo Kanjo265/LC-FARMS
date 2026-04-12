@@ -3,7 +3,7 @@ import { Accordion as AccordionPrimitive } from "@base-ui/react/accordion"
 import { cn } from "@/lib/utils"
 import { ChevronDownIcon, ChevronUpIcon } from "lucide-react"
 
-function Accordion({ className, ...props }: AccordionPrimitive.Root.Props) {
+function Accordion({ className, asChild, ...props }: AccordionPrimitive.Root.Props & { asChild?: boolean }) {
   return (
     <AccordionPrimitive.Root
       data-slot="accordion"
@@ -13,7 +13,7 @@ function Accordion({ className, ...props }: AccordionPrimitive.Root.Props) {
   )
 }
 
-function AccordionItem({ className, ...props }: AccordionPrimitive.Item.Props) {
+function AccordionItem({ className, asChild, ...props }: AccordionPrimitive.Item.Props & { asChild?: boolean }) {
   return (
     <AccordionPrimitive.Item
       data-slot="accordion-item"
@@ -26,8 +26,9 @@ function AccordionItem({ className, ...props }: AccordionPrimitive.Item.Props) {
 function AccordionTrigger({
   className,
   children,
+  asChild,
   ...props
-}: AccordionPrimitive.Trigger.Props) {
+}: AccordionPrimitive.Trigger.Props & { asChild?: boolean }) {
   return (
     <AccordionPrimitive.Header className="flex">
       <AccordionPrimitive.Trigger
@@ -49,8 +50,9 @@ function AccordionTrigger({
 function AccordionContent({
   className,
   children,
+  asChild,
   ...props
-}: AccordionPrimitive.Panel.Props) {
+}: AccordionPrimitive.Panel.Props & { asChild?: boolean }) {
   return (
     <AccordionPrimitive.Panel
       data-slot="accordion-content"

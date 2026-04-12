@@ -26,7 +26,7 @@ import {
   Facebook,
   Instagram
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -36,6 +36,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { cn } from "@/lib/utils";
 
 // --- Constants & Assets ---
 const IMAGES = {
@@ -93,7 +94,7 @@ const Navbar = () => {
               {link.name}
             </a>
           ))}
-          <Button className="bg-primary hover:bg-primary/90" render={<a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" />}>
+          <Button nativeButton={false} className="bg-primary hover:bg-primary/90" render={<a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" />}>
             Order Now
           </Button>
         </div>
@@ -101,7 +102,12 @@ const Navbar = () => {
         {/* Mobile Nav */}
         <div className="md:hidden">
           <Sheet>
-            <SheetTrigger render={<Button variant="ghost" size="icon" className={isScrolled ? "text-foreground" : "text-white"} />}>
+            <SheetTrigger 
+              className={cn(
+                buttonVariants({ variant: "ghost", size: "icon" }), 
+                isScrolled ? "text-foreground" : "text-white"
+              )}
+            >
               <Menu className="h-6 w-6" />
             </SheetTrigger>
             <SheetContent side="right" className="w-[300px] sm:w-[400px]">
@@ -111,7 +117,7 @@ const Navbar = () => {
                     {link.name}
                   </a>
                 ))}
-                <Button className="w-full" render={<a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" />}>
+                <Button nativeButton={false} className="w-full" render={<a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" />}>
                   Order Now
                 </Button>
               </div>
@@ -156,10 +162,10 @@ const Hero = () => {
               From farm to table — premium mushrooms grown sustainably in Malawi. Healthy, nutritious, and delivered fresh to your doorstep.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
-              <Button size="lg" className="bg-primary hover:bg-primary/90 text-lg px-8 py-6 h-auto" render={<a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" />}>
+              <Button nativeButton={false} size="lg" className="bg-primary hover:bg-primary/90 text-lg px-8 py-6 h-auto" render={<a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" />}>
                 Order Now <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
-              <Button size="lg" variant="outline" className="bg-white/10 hover:bg-white/20 text-white border-white/30 text-lg px-8 py-6 h-auto" render={<a href="#partners" />}>
+              <Button nativeButton={false} size="lg" variant="outline" className="bg-white/10 hover:bg-white/20 text-white border-white/30 text-lg px-8 py-6 h-auto" render={<a href="#partners" />}>
                 Become a Distributor
               </Button>
             </div>
@@ -251,7 +257,7 @@ const Products = () => {
                       </li>
                     ))}
                   </ul>
-                  <Button className="w-full py-6 text-lg" render={<a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" />}>
+                  <Button nativeButton={false} className="w-full py-6 text-lg" render={<a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" />}>
                     {product.cta}
                   </Button>
                 </CardContent>
@@ -413,7 +419,7 @@ const TargetCustomers = () => {
         </div>
 
         <div className="mt-16 text-center">
-          <Button size="lg" className="bg-primary hover:bg-primary/90 px-10 py-6 h-auto text-lg" render={<a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" />}>
+          <Button nativeButton={false} size="lg" className="bg-primary hover:bg-primary/90 px-10 py-6 h-auto text-lg" render={<a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" />}>
             Partner With Us
           </Button>
         </div>
@@ -646,7 +652,7 @@ const Contact = () => {
             <p className="text-muted-foreground mb-8">
               The fastest way to get a response and place your order is through WhatsApp. Our team is ready to assist you.
             </p>
-            <Button size="lg" className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white py-8 text-xl h-auto" render={<a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" />}>
+            <Button nativeButton={false} size="lg" className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white py-8 text-xl h-auto" render={<a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" />}>
               <MessageCircle className="mr-3 h-7 w-7" /> Chat on WhatsApp
             </Button>
             <p className="text-center mt-6 text-sm text-muted-foreground">
