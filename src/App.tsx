@@ -47,7 +47,7 @@ const IMAGES = {
   DRIED: "https://lh3.googleusercontent.com/d/1VBBuvwtsTl5NVwGY-ISPZcTXYCF1USVe",
 };
 
-const WHATSAPP_NUMBER = "+265885627133";
+const WHATSAPP_NUMBER = "+265991890948";
 const WHATSAPP_LINK = `https://wa.me/${WHATSAPP_NUMBER}?text=Hello%20LC%20FARMS,%20I'm%20interested%20in%20your%20mushrooms!`;
 
 const formSchema = z.object({
