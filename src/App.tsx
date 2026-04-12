@@ -40,7 +40,7 @@ import { cn } from "@/lib/utils";
 
 // --- Constants & Assets ---
 const IMAGES = {
-  LOGO: "https://lh3.googleusercontent.com/d/1NK4nI660Ocr88BQEuaite2uR2UKtjVu6",
+  LOGO: "https://lh3.googleusercontent.com/d/1eQrdiO9GSM_cUJ44kX3FIWMwgyBxG9ax",
   TRAY: "https://lh3.googleusercontent.com/d/1uconozyYNUpTfQWf8e5S2FIJj9oeGDHX",
   SHADE: "https://lh3.googleusercontent.com/d/1QE8M4N0hLKxkJuGRTxiconWnLxsR2DgC",
   BAGS: "https://lh3.googleusercontent.com/d/1ITpcFGvoAN_m5q6TATcA89wSyfvCe8Mn",
