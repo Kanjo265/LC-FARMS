@@ -1,0 +1,49 @@
+{
+  "entities": {
+    "AgentRegistration": {
+      "title": "Agent Registration",
+      "description": "Information provided by potential agents/partners.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Full name of the applicant."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Email address of the applicant."
+        },
+        "phone": {
+          "type": "string",
+          "description": "Phone number of the applicant."
+        },
+        "location": {
+          "type": "string",
+          "description": "Business location or area of operation."
+        },
+        "experience": {
+          "type": "string",
+          "description": "Brief description of business experience."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "reviewed", "approved", "rejected"],
+          "description": "Current status of the application."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the application was submitted."
+        }
+      },
+      "required": ["name", "email", "phone", "location", "status", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/agentRegistrations/{registrationId}": {
+      "schema": "AgentRegistration",
+      "description": "Collection of agent registration applications."
+    }
+  }
+}

@@ -24,7 +24,9 @@ import {
   ChevronDown,
   Youtube,
   Facebook,
-  Instagram
+  Instagram,
+  Search,
+  Clock
 } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -37,6 +39,77 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { cn } from "@/lib/utils";
+import { db, auth } from "./firebase";
+import { 
+  collection, 
+  addDoc, 
+  serverTimestamp, 
+  query, 
+  orderBy, 
+  onSnapshot, 
+  updateDoc, 
+  doc,
+  deleteDoc
+} from "firebase/firestore";
+import { 
+  signInWithPopup, 
+  GoogleAuthProvider, 
+  signOut, 
+  onAuthStateChanged,
+  User
+} from "firebase/auth";
+
+// --- Types & Utilities ---
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId: string | undefined;
+    email: string | null | undefined;
+    emailVerified: boolean | undefined;
+    isAnonymous: boolean | undefined;
+    tenantId: string | null | undefined;
+    providerInfo: {
+      providerId: string;
+      displayName: string | null;
+      email: string | null;
+      photoUrl: string | null;
+    }[];
+  }
+}
+
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData.map(provider => ({
+        providerId: provider.providerId,
+        displayName: provider.displayName,
+        email: provider.email,
+        photoUrl: provider.photoURL
+      })) || []
+    },
+    operationType,
+    path
+  }
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
 
 // --- Constants & Assets ---
 const IMAGES = {
@@ -56,6 +129,14 @@ const formSchema = z.object({
   interest: z.string().min(1, "Please select an interest"),
 });
 
+const agentFormSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  email: z.string().email("Please enter a valid email address"),
+  phone: z.string().min(8, "Please enter a valid phone number"),
+  location: z.string().min(2, "Please enter your location"),
+  experience: z.string().optional(),
+});
+
 // --- Components ---
 
 const Navbar = () => {
@@ -72,6 +153,7 @@ const Navbar = () => {
     { name: "Process", href: "#process" },
     { name: "Why Us", href: "#why-us" },
     { name: "Partners", href: "#partners" },
+    { name: "Agent Portal", href: "#agent-portal" },
     { name: "Contact", href: "#contact" },
   ];
 
@@ -165,8 +247,8 @@ const Hero = () => {
               <Button nativeButton={false} size="lg" className="bg-primary hover:bg-primary/90 text-lg px-8 py-6 h-auto" render={<a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" />}>
                 Order Now <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
-              <Button nativeButton={false} size="lg" variant="outline" className="bg-white/10 hover:bg-white/20 text-white border-white/30 text-lg px-8 py-6 h-auto" render={<a href="#partners" />}>
-                Become a Distributor
+              <Button nativeButton={false} size="lg" variant="outline" className="bg-white/10 hover:bg-white/20 text-white border-white/30 text-lg px-8 py-6 h-auto" render={<a href="#agent-portal" />}>
+                Become an Agent
               </Button>
             </div>
 
@@ -485,10 +567,18 @@ const LeadForm = () => {
     resolver: zodResolver(formSchema)
   });
 
-  const onSubmit = (data: any) => {
-    console.log("Form Data:", data);
-    setSubmitted(true);
-    // In a real app, you'd send this to a backend
+  const onSubmit = async (data: any) => {
+    try {
+      await addDoc(collection(db, "leads"), {
+        ...data,
+        createdAt: serverTimestamp(),
+        status: 'new'
+      });
+      setSubmitted(true);
+    } catch (error) {
+      console.error("Error submitting lead:", error);
+      alert("Something went wrong. Please try again.");
+    }
   };
 
   return (
@@ -560,6 +650,464 @@ const LeadForm = () => {
         </div>
       </div>
     </section>
+  );
+};
+
+const AgentPortal = () => {
+  const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const { register, handleSubmit, formState: { errors }, reset } = useForm({
+    resolver: zodResolver(agentFormSchema)
+  });
+
+  const onSubmit = async (data: any) => {
+    setLoading(true);
+    const path = 'agentRegistrations';
+    try {
+      await addDoc(collection(db, path), {
+        ...data,
+        status: 'pending',
+        createdAt: serverTimestamp(),
+      });
+      setSubmitted(true);
+      reset();
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, path);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <section id="agent-portal" className="py-24 bg-white">
+      <div className="container mx-auto px-4">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-16">
+            <Badge className="mb-4 bg-primary/10 text-primary hover:bg-primary/20">Partner Program</Badge>
+            <h2 className="text-3xl md:text-5xl font-bold mb-6">Join the LC FARMS Family</h2>
+            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+              We are looking for passionate agents and partners to help us bring premium mushrooms to every corner of Malawi. Grow your business with us.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8 mb-16">
+            {[
+              { title: "Premium Quality", desc: "Access to the best organic mushrooms in Malawi." },
+              { title: "Marketing Support", desc: "We provide branding materials and lead generation." },
+              { title: "Scalable Growth", desc: "Competitive pricing and reliable bulk supply." }
+            ].map((benefit, i) => (
+              <div key={i} className="p-6 rounded-2xl bg-muted/30 border border-border/50">
+                <h4 className="font-bold text-xl mb-2 text-primary">{benefit.title}</h4>
+                <p className="text-muted-foreground">{benefit.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          <Card className="border-none shadow-2xl overflow-hidden">
+            <div className="grid md:grid-cols-5">
+              <div className="md:col-span-2 bg-secondary p-10 text-white flex flex-col justify-center">
+                <h3 className="text-2xl font-bold mb-6">Agent Application</h3>
+                <p className="text-white/70 mb-8">
+                  Fill out the form to start your journey as an LC FARMS partner. Our team will review your application and contact you within 48 hours.
+                </p>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-primary" />
+                    <span className="text-sm">Exclusive territory rights</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-primary" />
+                    <span className="text-sm">Training & resources</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-primary" />
+                    <span className="text-sm">Flexible partnership models</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="md:col-span-3 p-10">
+                {submitted ? (
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="text-center py-12"
+                  >
+                    <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <CheckCircle2 className="h-10 w-10 text-primary" />
+                    </div>
+                    <h3 className="text-2xl font-bold mb-2">Application Received!</h3>
+                    <p className="text-muted-foreground mb-8">Thank you for your interest in partnering with LC FARMS. We'll be in touch soon.</p>
+                    <Button variant="outline" onClick={() => setSubmitted(false)}>Submit another application</Button>
+                  </motion.div>
+                ) : (
+                  <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+                    <div className="grid sm:grid-cols-2 gap-5">
+                      <div className="space-y-2">
+                        <Label htmlFor="agent-name">Full Name</Label>
+                        <Input id="agent-name" placeholder="Your Name" {...register("name")} className={errors.name ? "border-destructive" : ""} />
+                        {errors.name && <p className="text-xs text-destructive">{errors.name.message as string}</p>}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="agent-email">Email Address</Label>
+                        <Input id="agent-email" type="email" placeholder="email@example.com" {...register("email")} className={errors.email ? "border-destructive" : ""} />
+                        {errors.email && <p className="text-xs text-destructive">{errors.email.message as string}</p>}
+                      </div>
+                    </div>
+                    <div className="grid sm:grid-cols-2 gap-5">
+                      <div className="space-y-2">
+                        <Label htmlFor="agent-phone">Phone Number</Label>
+                        <Input id="agent-phone" placeholder="+265..." {...register("phone")} className={errors.phone ? "border-destructive" : ""} />
+                        {errors.phone && <p className="text-xs text-destructive">{errors.phone.message as string}</p>}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="agent-location">Location / Area</Label>
+                        <Input id="agent-location" placeholder="City, District" {...register("location")} className={errors.location ? "border-destructive" : ""} />
+                        {errors.location && <p className="text-xs text-destructive">{errors.location.message as string}</p>}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="agent-experience">Business Experience (Optional)</Label>
+                      <textarea 
+                        id="agent-experience" 
+                        {...register("experience")}
+                        className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        placeholder="Tell us a bit about your business background..."
+                      />
+                    </div>
+                    <Button type="submit" className="w-full py-6 text-lg" disabled={loading}>
+                      {loading ? "Submitting..." : "Apply to Partner"}
+                    </Button>
+                  </form>
+                )}
+              </div>
+            </div>
+          </Card>
+        </div>
+      </div>
+    </section>
+  );
+};
+
+const AdminDashboard = ({ user, onLogout }: { user: User, onLogout: () => void }) => {
+  const [activeTab, setActiveTab] = useState<'agents' | 'leads'>('agents');
+  const [data, setData] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLoading(true);
+    const collectionName = activeTab === 'agents' ? "agentRegistrations" : "leads";
+    const q = query(collection(db, collectionName), orderBy("createdAt", "desc"));
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setData(items);
+      setLoading(false);
+    }, (err) => {
+      console.error(err);
+      setError("You do not have permission to view this data.");
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [activeTab]);
+
+  const updateStatus = async (id: string, status: string) => {
+    const collectionName = activeTab === 'agents' ? "agentRegistrations" : "leads";
+    try {
+      await updateDoc(doc(db, collectionName, id), { status });
+    } catch (err) {
+      console.error(err);
+      alert("Failed to update status");
+    }
+  };
+
+  const deleteEntry = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this entry?")) return;
+    const collectionName = activeTab === 'agents' ? "agentRegistrations" : "leads";
+    try {
+      await deleteDoc(doc(db, collectionName, id));
+    } catch (err) {
+      console.error(err);
+      alert("Failed to delete entry");
+    }
+  };
+
+  const deleteAll = async () => {
+    if (data.length === 0) return;
+    if (!window.confirm(`Are you sure you want to delete ALL ${data.length} entries in this view? This cannot be undone.`)) return;
+    
+    const collectionName = activeTab === 'agents' ? "agentRegistrations" : "leads";
+    setLoading(true);
+    try {
+      // Note: Firestore doesn't have a "delete collection" in client SDK, so we delete one by one
+      // For a real app, this should be a cloud function
+      const promises = data.map(item => deleteDoc(doc(db, collectionName, item.id)));
+      await Promise.all(promises);
+      alert("All entries deleted successfully.");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to delete some entries.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredData = data.filter(item => 
+    item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.location?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.interest?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  if (loading && data.length === 0) return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-muted/30">
+      <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
+      <p className="text-muted-foreground font-medium">Loading Dashboard...</p>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-muted/30 pt-24 pb-12">
+      <div className="container mx-auto px-4">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-secondary">Management View</h1>
+            <p className="text-muted-foreground">Manage your business growth and customer inquiries</p>
+          </div>
+          <div className="flex items-center gap-4 bg-white p-2 rounded-xl shadow-sm border">
+            <div className="text-right hidden sm:block px-2">
+              <p className="text-sm font-bold text-primary">{user.displayName}</p>
+              <p className="text-xs text-muted-foreground">{user.email}</p>
+            </div>
+            <Button variant="outline" size="sm" onClick={onLogout} className="border-destructive/20 text-destructive hover:bg-destructive/5">
+              Logout
+            </Button>
+          </div>
+        </div>
+
+        {error ? (
+          <Card className="p-12 text-center border-destructive/20 bg-destructive/5">
+            <X className="h-12 w-12 text-destructive mx-auto mb-4" />
+            <h3 className="text-xl font-bold mb-2">Access Denied</h3>
+            <p className="text-muted-foreground mb-6">{error}</p>
+            <Button onClick={onLogout}>Try Different Account</Button>
+          </Card>
+        ) : (
+          <div className="space-y-8">
+            {/* Tab Switcher */}
+            <div className="flex gap-2 p-1 bg-white rounded-2xl shadow-sm border w-fit">
+              <Button 
+                variant={activeTab === 'agents' ? 'default' : 'ghost'} 
+                onClick={() => setActiveTab('agents')}
+                className="rounded-xl"
+              >
+                <Users className="mr-2 h-4 w-4" /> Agent Applications
+              </Button>
+              <Button 
+                variant={activeTab === 'leads' ? 'default' : 'ghost'} 
+                onClick={() => setActiveTab('leads')}
+                className="rounded-xl"
+              >
+                <MessageCircle className="mr-2 h-4 w-4" /> Customer Inquiries
+              </Button>
+            </div>
+
+            {/* Analytics Section */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card className="p-6 border-none shadow-lg bg-white">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600">
+                    {activeTab === 'agents' ? <Users className="h-6 w-6" /> : <MessageCircle className="h-6 w-6" />}
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground font-medium">Total {activeTab === 'agents' ? 'Applications' : 'Inquiries'}</p>
+                    <p className="text-3xl font-bold">{data.length}</p>
+                  </div>
+                </div>
+              </Card>
+              <Card className="p-6 border-none shadow-lg bg-white">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600">
+                    <Clock className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground font-medium">Pending Action</p>
+                    <p className="text-3xl font-bold">
+                      {data.filter(a => a.status === 'pending' || a.status === 'new').length}
+                    </p>
+                  </div>
+                </div>
+              </Card>
+              <Card className="p-6 border-none shadow-lg bg-white">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-green-50 flex items-center justify-center text-green-600">
+                    <CheckCircle2 className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground font-medium">{activeTab === 'agents' ? 'Approved Partners' : 'Resolved'}</p>
+                    <p className="text-3xl font-bold">
+                      {data.filter(a => a.status === 'approved' || a.status === 'resolved').length}
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            </div>
+
+            {/* Main Content */}
+            <Card className="border-none shadow-xl bg-white overflow-hidden">
+              <div className="p-6 border-b bg-muted/10 flex flex-col sm:flex-row justify-between items-center gap-4">
+                <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
+                  <div className="relative w-full sm:w-80">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                      placeholder="Search entries..." 
+                      className="pl-10 bg-white"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={deleteAll}
+                    className="text-destructive hover:bg-destructive/5 border-destructive/20 w-full sm:w-auto"
+                  >
+                    Delete All Entries
+                  </Button>
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Showing {filteredData.length} of {data.length} {activeTab === 'agents' ? 'applications' : 'inquiries'}
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-muted/30 border-b">
+                      <th className="p-4 font-bold text-xs uppercase tracking-wider text-muted-foreground">Date</th>
+                      <th className="p-4 font-bold text-xs uppercase tracking-wider text-muted-foreground">Details</th>
+                      <th className="p-4 font-bold text-xs uppercase tracking-wider text-muted-foreground">{activeTab === 'agents' ? 'Location' : 'Interest'}</th>
+                      {activeTab === 'agents' && <th className="p-4 font-bold text-xs uppercase tracking-wider text-muted-foreground">Experience</th>}
+                      <th className="p-4 font-bold text-xs uppercase tracking-wider text-muted-foreground">Status</th>
+                      <th className="p-4 font-bold text-xs uppercase tracking-wider text-muted-foreground text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {filteredData.length === 0 ? (
+                      <tr>
+                        <td colSpan={activeTab === 'agents' ? 6 : 5} className="p-20 text-center">
+                          <div className="max-w-xs mx-auto">
+                            <Search className="h-12 w-12 text-muted/30 mx-auto mb-4" />
+                            <p className="text-lg font-bold text-muted-foreground">No entries found</p>
+                            <p className="text-sm text-muted-foreground/60">Try adjusting your search or check back later.</p>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredData.map((item) => (
+                        <tr key={item.id} className="hover:bg-muted/5 transition-colors group">
+                          <td className="p-4 text-sm whitespace-nowrap align-top">
+                            <div className="font-medium">{item.createdAt?.toDate().toLocaleDateString()}</div>
+                            <div className="text-xs text-muted-foreground">{item.createdAt?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                          </td>
+                          <td className="p-4 align-top">
+                            <p className="font-bold text-sm text-secondary">{item.name}</p>
+                            <div className="flex flex-col gap-1 mt-1">
+                              {item.email && (
+                                <a href={`mailto:${item.email}`} className="text-xs text-primary hover:underline flex items-center gap-1">
+                                  <Mail className="h-3 w-3" /> {item.email}
+                                </a>
+                              )}
+                              <a href={`tel:${item.phone}`} className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1">
+                                <Phone className="h-3 w-3" /> {item.phone}
+                              </a>
+                            </div>
+                          </td>
+                          <td className="p-4 align-top">
+                            <div className="flex items-center gap-1 text-sm capitalize">
+                              {activeTab === 'agents' ? (
+                                <><MapPin className="h-3 w-3 text-muted-foreground" /> {item.location}</>
+                              ) : (
+                                <><Utensils className="h-3 w-3 text-muted-foreground" /> {item.interest}</>
+                              )}
+                            </div>
+                          </td>
+                          {activeTab === 'agents' && (
+                            <td className="p-4 align-top max-w-xs">
+                              <p className="text-xs text-muted-foreground line-clamp-3 italic">
+                                {item.experience || "No experience notes provided."}
+                              </p>
+                            </td>
+                          )}
+                          <td className="p-4 align-top">
+                            <Badge className={cn(
+                              "capitalize px-3 py-1 text-[10px] font-bold",
+                              (item.status === 'pending' || item.status === 'new') && "bg-amber-100 text-amber-700 hover:bg-amber-200 border-amber-200",
+                              (item.status === 'approved' || item.status === 'resolved') && "bg-green-100 text-green-700 hover:bg-green-200 border-green-200",
+                              item.status === 'rejected' && "bg-red-100 text-red-700 hover:bg-red-200 border-red-200",
+                              item.status === 'reviewed' && "bg-blue-100 text-blue-700 hover:bg-blue-200 border-blue-200"
+                            )}>
+                              {item.status}
+                            </Badge>
+                          </td>
+                          <td className="p-4 text-right align-top">
+                            <div className="flex flex-col items-end gap-2">
+                              <select 
+                                className="text-xs border rounded-lg p-1.5 bg-white shadow-sm focus:ring-2 focus:ring-primary/20 outline-none"
+                                value={item.status}
+                                onChange={(e) => updateStatus(item.id, e.target.value)}
+                              >
+                                {activeTab === 'agents' ? (
+                                  <>
+                                    <option value="pending">Mark as Pending</option>
+                                    <option value="reviewed">Mark as Reviewed</option>
+                                    <option value="approved">Approve Partner</option>
+                                    <option value="rejected">Reject Application</option>
+                                  </>
+                                ) : (
+                                  <>
+                                    <option value="new">New Inquiry</option>
+                                    <option value="reviewed">Reviewed</option>
+                                    <option value="resolved">Mark Resolved</option>
+                                  </>
+                                )}
+                              </select>
+                              <div className="flex gap-2">
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon-xs" 
+                                  className="text-primary hover:bg-primary/10"
+                                  title="Contact via WhatsApp"
+                                  onClick={() => window.open(`https://wa.me/${item.phone.replace(/\D/g, '')}`, '_blank')}
+                                >
+                                  <MessageCircle className="h-4 w-4" />
+                                </Button>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon-xs" 
+                                  className="text-destructive hover:bg-destructive/10"
+                                  title="Delete Entry"
+                                  onClick={() => deleteEntry(item.id)}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          </div>
+        )}
+      </div>
+    </div>
   );
 };
 
@@ -707,6 +1255,7 @@ const Footer = () => {
               <li><a href="#process" className="hover:text-primary transition-colors">Our Process</a></li>
               <li><a href="#why-us" className="hover:text-primary transition-colors">Why Choose Us</a></li>
               <li><a href="#partners" className="hover:text-primary transition-colors">Partnerships</a></li>
+              <li><button onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })} className="hover:text-primary transition-colors cursor-pointer">Admin Portal</button></li>
             </ul>
           </div>
 
@@ -748,6 +1297,54 @@ const StickyWhatsApp = () => {
 };
 
 export default function App() {
+  const [user, setUser] = useState<User | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [showDashboard, setShowDashboard] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      if (u?.email?.toLowerCase() === "lenardkanjo2@gmail.com") {
+        setIsAdmin(true);
+      } else {
+        setIsAdmin(false);
+        setShowDashboard(false);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleLogin = () => {
+    const provider = new GoogleAuthProvider();
+    signInWithPopup(auth, provider).catch((err) => {
+      if (err.code === 'auth/popup-blocked') {
+        alert("The login popup was blocked by your browser. Please allow popups for this site and try again.");
+      } else {
+        console.error(err);
+        alert("Login failed: " + err.message);
+      }
+    });
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      setShowDashboard(false);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  if (showDashboard && user && isAdmin) {
+    return (
+      <div className="min-h-screen">
+        <Navbar />
+        <AdminDashboard user={user} onLogout={handleLogout} />
+        <Footer />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen">
       <Navbar />
@@ -758,12 +1355,45 @@ export default function App() {
         <WhyChooseUs />
         <TargetCustomers />
         <Testimonials />
+        <AgentPortal />
         <LeadForm />
         <FAQ />
         <Contact />
       </main>
       <Footer />
       <StickyWhatsApp />
+      
+      {/* Admin Toggle */}
+      <div className="fixed bottom-6 left-6 z-50">
+        {user ? (
+          isAdmin ? (
+            <Button 
+              onClick={() => setShowDashboard(!showDashboard)}
+              className="rounded-full shadow-2xl bg-primary hover:bg-primary/90 text-white px-6 py-6 h-auto"
+            >
+              <Users className="mr-2 h-5 w-5" /> {showDashboard ? "Back to Website" : "Open Admin Dashboard"}
+            </Button>
+          ) : (
+            <div className="flex flex-col items-start gap-2">
+              <Badge variant="outline" className="bg-white/80 backdrop-blur-sm text-destructive border-destructive/20">
+                Not an Admin: {user.email}
+              </Badge>
+              <Button variant="outline" size="sm" onClick={handleLogout} className="bg-white/80 backdrop-blur-sm shadow-md">
+                Logout & Switch Account
+              </Button>
+            </div>
+          )
+        ) : (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleLogin}
+            className="bg-white/50 backdrop-blur-sm border-primary/20 text-primary/60 hover:text-primary hover:bg-white transition-all shadow-sm"
+          >
+            Admin Login
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

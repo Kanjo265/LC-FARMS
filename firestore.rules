@@ -1,0 +1,77 @@
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: agentRegistrations
+// Document ID: auto-generated
+// Fields:
+//   - name: string (required, 2-100 chars)
+//   - email: string (required, valid email)
+//   - phone: string (required, 8-20 chars)
+//   - location: string (required, 2-200 chars)
+//   - experience: string (optional, 0-1000 chars)
+//   - status: string (required, enum: ['pending', 'reviewed', 'approved', 'rejected'])
+//   - createdAt: timestamp (required)
+//
+// ===============================================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "lenardkanjo2@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidAgentRegistration(data) {
+      return data.keys().hasAll(['name', 'email', 'phone', 'location', 'status', 'createdAt']) &&
+             data.keys().hasOnly(['name', 'email', 'phone', 'location', 'experience', 'status', 'createdAt']) &&
+             data.name is string && data.name.size() >= 2 && data.name.size() <= 100 &&
+             isValidEmail(data.email) &&
+             data.phone is string && data.phone.size() >= 8 && data.phone.size() <= 20 &&
+             data.location is string && data.location.size() >= 2 && data.location.size() <= 200 &&
+             (!('experience' in data) || (data.experience is string && data.experience.size() <= 1000)) &&
+             data.status == 'pending' &&
+             data.createdAt is timestamp;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /agentRegistrations/{registrationId} {
+      // Anyone can submit a registration as long as it's valid
+      allow create: if isValidAgentRegistration(request.resource.data);
+      
+      // Only admins can read, update, or delete registrations
+      allow read, update, delete: if isAdmin();
+    }
+
+    match /leads/{leadId} {
+      // Anyone can submit a lead
+      allow create: if true; // We can add validation later if needed
+      
+      // Only admins can read, update, or delete leads
+      allow read, update, delete: if isAdmin();
+    }
+
+    match /users/{userId} {
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      allow write: if isAdmin();
+    }
+  }
+}
