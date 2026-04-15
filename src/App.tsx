@@ -176,8 +176,10 @@ const Navbar = () => {
               {link.name}
             </a>
           ))}
-          <Button nativeButton={false} className="bg-primary hover:bg-primary/90" render={<a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" />}>
-            Order Now
+          <Button asChild className="bg-primary hover:bg-primary/90">
+            <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer">
+              Order Now
+            </a>
           </Button>
         </div>
 
@@ -199,8 +201,10 @@ const Navbar = () => {
                     {link.name}
                   </a>
                 ))}
-                <Button nativeButton={false} className="w-full" render={<a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" />}>
-                  Order Now
+                <Button asChild className="w-full">
+                  <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer">
+                    Order Now
+                  </a>
                 </Button>
               </div>
             </SheetContent>
@@ -244,11 +248,15 @@ const Hero = () => {
               From farm to table — premium mushrooms grown sustainably in Malawi. Healthy, nutritious, and delivered fresh to your doorstep.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
-              <Button nativeButton={false} size="lg" className="bg-primary hover:bg-primary/90 text-lg px-8 py-6 h-auto" render={<a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" />}>
-                Order Now <ArrowRight className="ml-2 h-5 w-5" />
+              <Button asChild size="lg" className="bg-primary hover:bg-primary/90 text-lg px-8 py-6 h-auto">
+                <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer">
+                  Order Now <ArrowRight className="ml-2 h-5 w-5" />
+                </a>
               </Button>
-              <Button nativeButton={false} size="lg" variant="outline" className="bg-white/10 hover:bg-white/20 text-white border-white/30 text-lg px-8 py-6 h-auto" render={<a href="#agent-portal" />}>
-                Become an Agent
+              <Button asChild size="lg" variant="outline" className="bg-white/10 hover:bg-white/20 text-white border-white/30 text-lg px-8 py-6 h-auto">
+                <a href="#agent-portal">
+                  Become an Agent
+                </a>
               </Button>
             </div>
 
@@ -339,8 +347,10 @@ const Products = () => {
                       </li>
                     ))}
                   </ul>
-                  <Button nativeButton={false} className="w-full py-6 text-lg" render={<a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" />}>
-                    {product.cta}
+                  <Button asChild className="w-full py-6 text-lg">
+                    <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer">
+                      {product.cta}
+                    </a>
                   </Button>
                 </CardContent>
               </Card>
@@ -501,8 +511,10 @@ const TargetCustomers = () => {
         </div>
 
         <div className="mt-16 text-center">
-          <Button nativeButton={false} size="lg" className="bg-primary hover:bg-primary/90 px-10 py-6 h-auto text-lg" render={<a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" />}>
-            Partner With Us
+          <Button asChild size="lg" className="bg-primary hover:bg-primary/90 px-10 py-6 h-auto text-lg">
+            <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer">
+              Partner With Us
+            </a>
           </Button>
         </div>
       </div>
@@ -1010,8 +1022,8 @@ const AdminDashboard = ({ user, onLogout }: { user: User, onLogout: () => void }
                       filteredData.map((item) => (
                         <tr key={item.id} className="hover:bg-muted/5 transition-colors group">
                           <td className="p-4 text-sm whitespace-nowrap align-top">
-                            <div className="font-medium">{item.createdAt?.toDate().toLocaleDateString()}</div>
-                            <div className="text-xs text-muted-foreground">{item.createdAt?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                            <div className="font-medium">{item.createdAt?.toDate ? item.createdAt.toDate().toLocaleDateString() : 'Pending...'}</div>
+                            <div className="text-xs text-muted-foreground">{item.createdAt?.toDate ? item.createdAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</div>
                           </td>
                           <td className="p-4 align-top">
                             <p className="font-bold text-sm text-secondary">{item.name}</p>
@@ -1200,8 +1212,10 @@ const Contact = () => {
             <p className="text-muted-foreground mb-8">
               The fastest way to get a response and place your order is through WhatsApp. Our team is ready to assist you.
             </p>
-            <Button nativeButton={false} size="lg" className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white py-8 text-xl h-auto" render={<a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" />}>
-              <MessageCircle className="mr-3 h-7 w-7" /> Chat on WhatsApp
+            <Button asChild size="lg" className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white py-8 text-xl h-auto">
+              <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer">
+                <MessageCircle className="mr-3 h-7 w-7" /> Chat on WhatsApp
+              </a>
             </Button>
             <p className="text-center mt-6 text-sm text-muted-foreground">
               Available Monday - Saturday, 8:00 AM - 5:00 PM
