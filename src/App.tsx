@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { 
   Menu, 
@@ -49,13 +49,19 @@ import {
   onSnapshot, 
   updateDoc, 
   doc,
-  deleteDoc
+  deleteDoc,
+  getDoc
 } from "firebase/firestore";
 import { 
-  signInWithPopup, 
-  GoogleAuthProvider, 
-  signOut, 
+  signInWithPopup,
+  GoogleAuthProvider,
+  signOut,
   onAuthStateChanged,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  sendEmailVerification,
+  sendPasswordResetEmail,
+  updateProfile,
   User
 } from "firebase/auth";
 
@@ -1310,19 +1316,114 @@ const StickyWhatsApp = () => {
   );
 };
 
+type AuthPanelProps = { onClose: () => void; onGoogleLogin: () => void };
+
+const AuthPanel = ({ onClose, onGoogleLogin }: AuthPanelProps) => {
+  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setBusy(true);
+    setError('');
+    setMessage('');
+    try {
+      if (mode === 'signup') {
+        const credential = await createUserWithEmailAndPassword(auth, email.trim(), password);
+        if (name.trim()) await updateProfile(credential.user, { displayName: name.trim() });
+        await sendEmailVerification(credential.user);
+        setMessage('Your account is ready. Check your email to verify it. An administrator must approve your access before you can use the admin dashboard.');
+      } else {
+        await signInWithEmailAndPassword(auth, email.trim(), password);
+        onClose();
+      }
+    } catch (err) {
+      const authError = err as { code?: string };
+      const messages: Record<string, string> = {
+        'auth/email-already-in-use': 'An account already exists for this email. Sign in instead.',
+        'auth/invalid-credential': 'Email or password is incorrect.',
+        'auth/weak-password': 'Choose a password with at least 8 characters.',
+        'auth/too-many-requests': 'Too many attempts. Please wait a moment and try again.',
+        'auth/network-request-failed': 'Could not reach the sign-in service. Check your connection and try again.'
+      };
+      setError(messages[authError.code ?? ''] ?? 'We could not complete that request. Please try again.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const resetPassword = async () => {
+    setError('');
+    setMessage('');
+    if (!email.trim()) {
+      setError('Enter your email address first, then choose Forgot password.');
+      return;
+    }
+    try {
+      await sendPasswordResetEmail(auth, email.trim());
+      setMessage('If an account exists for that email, a password reset link is on its way.');
+    } catch {
+      setError('We could not send a reset email. Check the address and try again.');
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+      <div className="relative w-full max-w-md rounded-3xl border border-white/30 bg-white p-7 shadow-2xl sm:p-9">
+        <button type="button" onClick={onClose} aria-label="Close sign in" className="absolute right-5 top-5 rounded-full bg-slate-100 px-3 py-1 text-slate-600 hover:bg-slate-200">×</button>
+        <div className="mb-6 flex items-center gap-3">
+          <div className="grid h-11 w-11 place-items-center rounded-2xl bg-emerald-700 font-bold text-white">LC</div>
+          <div><p className="font-bold text-secondary">LC FARMS</p><p className="text-xs text-muted-foreground">Malawi · Team access</p></div>
+        </div>
+        <div className="mb-6 grid grid-cols-2 rounded-xl bg-muted p-1">
+          <button type="button" onClick={() => { setMode('signin'); setError(''); setMessage(''); }} className={`rounded-lg px-3 py-2 text-sm font-semibold ${mode === 'signin' ? 'bg-white text-primary shadow-sm' : 'text-muted-foreground'}`}>Sign in</button>
+          <button type="button" onClick={() => { setMode('signup'); setError(''); setMessage(''); }} className={`rounded-lg px-3 py-2 text-sm font-semibold ${mode === 'signup' ? 'bg-white text-primary shadow-sm' : 'text-muted-foreground'}`}>Create account</button>
+        </div>
+        <h2 id="auth-title" className="text-2xl font-bold text-secondary">{mode === 'signin' ? 'Welcome back' : 'Join the LC FARMS team'}</h2>
+        <p className="mb-5 mt-1 text-sm text-muted-foreground">{mode === 'signin' ? 'Sign in to continue to your account.' : 'Create an account. Admin tools stay restricted until access is approved.'}</p>
+        <form onSubmit={submit} className="space-y-4">
+          {mode === 'signup' && <div className="space-y-2"><Label htmlFor="auth-name">Full name</Label><Input id="auth-name" autoComplete="name" value={name} onChange={event => setName(event.target.value)} required minLength={2} placeholder="Your full name" /></div>}
+          <div className="space-y-2"><Label htmlFor="auth-email">Email address</Label><Input id="auth-email" type="email" autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} required placeholder="you@example.com" /></div>
+          <div className="space-y-2"><Label htmlFor="auth-password">Password</Label><Input id="auth-password" type="password" autoComplete={mode === 'signin' ? 'current-password' : 'new-password'} value={password} onChange={event => setPassword(event.target.value)} required minLength={8} placeholder="At least 8 characters" /></div>
+          {mode === 'signin' && <button type="button" onClick={resetPassword} className="text-sm font-medium text-primary hover:underline">Forgot password?</button>}
+          {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+          {message && <p role="status" className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">{message}</p>}
+          <Button type="submit" disabled={busy} className="w-full bg-primary py-5 text-white">{busy ? 'Please wait…' : mode === 'signin' ? 'Sign in' : 'Create account'}</Button>
+        </form>
+        <div className="my-5 flex items-center gap-3 text-xs text-muted-foreground"><span className="h-px flex-1 bg-border" />OR<span className="h-px flex-1 bg-border" /></div>
+        <Button type="button" variant="outline" onClick={onGoogleLogin} className="w-full">Continue with Google</Button>
+        <p className="mt-5 text-center text-xs leading-relaxed text-muted-foreground">New accounts do not receive admin access automatically. Contact an LC FARMS administrator for approval.</p>
+      </div>
+    </div>
+  );
+};
+
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showDashboard, setShowDashboard] = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (u) => {
+    const unsubscribe = onAuthStateChanged(auth, async (u) => {
       setUser(u);
-      if (u?.email?.toLowerCase() === "lenardkanjo2@gmail.com") {
-        setIsAdmin(true);
-      } else {
-        setIsAdmin(false);
-        setShowDashboard(false);
+      let adminAccess = Boolean(u?.emailVerified && u.email?.toLowerCase() === "lenardkanjo2@gmail.com");
+      if (u) {
+        try {
+          const profile = await getDoc(doc(db, "users", u.uid));
+          adminAccess = adminAccess || profile.data()?.role === "admin";
+        } catch (err) {
+          console.error("Could not check account permissions:", err);
+        }
+      }
+      if (auth.currentUser?.uid === u?.uid) {
+        setIsAdmin(adminAccess);
+        if (!adminAccess) setShowDashboard(false);
       }
     });
     return () => unsubscribe();
@@ -1401,13 +1502,14 @@ export default function App() {
           <Button 
             variant="outline" 
             size="sm" 
-            onClick={handleLogin}
+            onClick={() => setShowAuth(true)}
             className="bg-white/50 backdrop-blur-sm border-primary/20 text-primary/60 hover:text-primary hover:bg-white transition-all shadow-sm"
           >
             Admin Login
           </Button>
         )}
       </div>
+      {showAuth && <AuthPanel onClose={() => setShowAuth(false)} onGoogleLogin={handleLogin} />}
     </div>
   );
 }
